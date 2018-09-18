@@ -11,7 +11,7 @@ namespace MessageGenerator
     {
         static void Main(string[] args)
         {
-            int length = 0, type = 0;
+            int length = 0, type = 0, symbolCount = 0;
             double percent = 0;
             string str = "", outFile = "";
 
@@ -20,9 +20,13 @@ namespace MessageGenerator
                 string option = args[i];
                 switch (option)
                 {
-                    case "-s":
+                    case "-l":
                         i++;
                         length = int.Parse(args[i]);
+                        break;
+                    case "-s":
+                        i++;
+                        symbolCount = int.Parse(args[i]);
                         break;
                     case "-m":
                         i++;
@@ -47,48 +51,79 @@ namespace MessageGenerator
 
             if(type == 0)
             {
-                generateMessage(length, str, outFile);
+                generateMessageFromStr(length, str, outFile);
             }
             else if(type == 1)
             {
-                Console.WriteLine(percent);
-
-                generateMessageBinary(length, percent / 100.0, outFile);
+                generateMessageEquiprobable(length, symbolCount, outFile);
+            }
+            else if (type == 2)
+            {
+                generateMessagePercent(length, percent / 100.0, outFile);
             }
         }
 
-        public static void generateMessage(int length, string str, string outFile)
+        public static void generateMessageFromStr(int length, string str, string outFile)
         {
             int count = length / str.Length;
             string message = string.Concat(Enumerable.Repeat(str, count));
             message += str.Substring(0, length % str.Length);
-
             File.WriteAllText(Directory.GetCurrentDirectory() + "\\" + outFile, message);
         }
 
-        public static void generateMessageBinary(int length, double percent0, string outFile)
+        public static void generateMessageEquiprobable(int length, int symbolCount, string outFile)
         {
             StringBuilder message = new StringBuilder(length);
-            float compteur = 0;
+            float[] a = new float[symbolCount];
+            Random rand = new Random();
+            for (int i = 0; i < length; i++)
+            {
+                int num = rand.Next(symbolCount);
+                message.Append("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ElementAt(num));
+                a[num]++;
+            }
+
+            File.WriteAllText(Directory.GetCurrentDirectory() + "\\" + outFile, message.ToString());
+            Console.WriteLine("Pourcentage d'occurence des symboles :");
+            for(int i = 0; i < symbolCount; i++)
+            {
+                Console.WriteLine($"{"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ElementAt(i)}: {a[i] / length * 100}%");
+            }
+        }
+
+        public static void generateMessagePercent(int length, double percent0, string outFile)
+        {
+            StringBuilder message = new StringBuilder(length);
+            float compteurA = 0, compteurB = 0, compteurC = 0, compteurD = 0;
             Random rand = new Random();
             for(int i = 0; i < length; i++)
             {
                 double num = rand.NextDouble();
                 if(num < percent0)
                 {
-                    message.Append(0);
-                    compteur++;
+                    message.Append("A");
+                    compteurA++;
+                }
+                else if(rand.Next(2) == 0)
+                {
+                    message.Append("B");
+                    compteurB++;
+                }
+                else if (rand.Next(2) == 0)
+                {
+                    message.Append("C");
+                    compteurC++;
                 }
                 else
                 {
-                    message.Append(1);
+                    message.Append("D");
+                    compteurD++;
                 }
-
             }
 
             File.WriteAllText(Directory.GetCurrentDirectory() + "\\" + outFile, message.ToString());
-            Console.WriteLine("Pourcentage d'occurence des symboles binaires:");
-            Console.WriteLine($"0: {compteur/length * 100}%, 1: {(length - compteur)/length * 100}%");
+            Console.WriteLine("Pourcentage d'occurence des symboles :");
+            Console.WriteLine($"A: {compteurA/length * 100}%, B: {compteurB / length * 100}%, C: {compteurC / length * 100}%, D: {compteurD / length * 100}%");
         }
 
 

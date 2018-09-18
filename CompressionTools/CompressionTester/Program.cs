@@ -255,6 +255,9 @@ namespace Lomont.Compression
                 }
                 // do first codec only
                 var data = File.ReadAllBytes(opts.Inputfile);
+
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+
                 var output = opts.Decompress ? codecs[0].Decompress(data) : codecs[0].Compress(data);
                 var headerMsg = $"File {opts.Inputfile} compressed from {data.Length} to {output.Length} for {(double)output.Length/data.Length:F3} ratio";
                 if (codecs[0] is Lz77Codec)
@@ -271,12 +274,14 @@ namespace Lomont.Compression
                 }
                 OutputData(opts.Outputfile,output,OutputFormats[opts.OutputFormatIndex], headerMsg);
 
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
                 var actionText = opts.Decompress ? "decompressed" : "compressed";
                 Console.WriteLine(
                     $"{Path.GetFileName(opts.Inputfile)} ({data.Length} bytes) {actionText} to {opts.Outputfile} ({output.Length} bytes).");
                 if (!opts.Decompress)
-                    Console.WriteLine($"Compression ratio {100.0 * output.Length / data.Length:F1}%");
-
+                    Console.WriteLine($"Compression ratio {100 - (100.0 * output.Length / data.Length):F1}%");
+                Console.WriteLine($"Elapsed time: {elapsedMs}ms");
                 return 1;
             }
             // if has only input file - do some testing
