@@ -14,7 +14,7 @@ def rgb2yuv(r, g, b) :
             u[i][j] = int(b[i][j]) - int(g[i][j])
             v[i][j] = int(r[i][j]) - int(g[i][j])
 
-    return y, u, v
+    return np.array(y), np.array(u), np.array(v)
 
 # Fonction qui convertit l'espace de couleur YUV vers RGB
 def yuv2rgb(y, u, v) :
@@ -29,6 +29,11 @@ def yuv2rgb(y, u, v) :
             b[i][j] = u[i][j] + g[i][j]
 
     return np.array(r), np.array(g), np.array(b)
+
+# Fonction qui effectue un sous-échantillonnage de la chrominance 
+# avec un ratio J:a:b de paramètres U (Cb), V (Cr)
+def subSampling(j, a, b, u, v) :
+    return np.array(u), np.array(v)
 
 # Ce script effectue la conversion de l'espace de couleur d'une image RGB vers YUV (réversible).
 # Nous utilisons un sous-échantillonnage 4:2:0.
