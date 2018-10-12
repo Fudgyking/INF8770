@@ -10,9 +10,9 @@ def rgb2yuv(r, g, b) :
 
     for i in range(len(r)) :
         for j in range(len(r[0])) :
-            y[i][j] = int((int(r[i][j]) + 2*int(g[i][j]) + int(b[i][j])) / 4)
-            u[i][j] = int(b[i][j]) - int(g[i][j])
-            v[i][j] = int(r[i][j]) - int(g[i][j])
+            y[i][j] = (((r[i][j]) + 2*(g[i][j]) + (b[i][j])) / 4)
+            u[i][j] = (b[i][j]) - (g[i][j])
+            v[i][j] = (r[i][j]) - (g[i][j])
 
     return np.array(y), np.array(u), np.array(v)
 
@@ -24,7 +24,7 @@ def yuv2rgb(y, u, v) :
 
     for i in range(len(y)) :
         for j in range(len(y[0])) :
-            g[i][j] = y[i][j] - int((u[i][j] + v[i][j])/4)
+            g[i][j] = y[i][j] - ((u[i][j] + v[i][j])/4)
             r[i][j] = v[i][j] + g[i][j]
             b[i][j] = u[i][j] + g[i][j]
 
@@ -66,6 +66,46 @@ def subSampling(j, a, b, u, v) :
 
     return np.array(u), np.array(v)
 
+# Fonction qui applique la transformée en ondelettes discrète de Haar 
+# avec un niveau de récursion défini sur les canaux Y, U, V
+# l : low, h : high
+def DWT(x, nbRecursion) :
+    if nbRecursion == 0 :
+        return x
+
+    # En X : filtrage passe-bas. Enlève les hautes fréquences en faisant une moyenne
+    xl = (x[:,::2] + x[:,1::2])/2
+
+    # En X : filtrage passe-haut. On extrait les hautes fréquences à l'aide des différences.
+    xh = (x[:,::2] - x[:,1::2])/2
+
+    # Poursuivre le traitement selon Y des images y1/yh, u1/uh et v1/vh.
+    # Sous-bande 1 : Basses fréquences en X et Y
+    xll = (xl[::2,:] + xl[1::2,:])/2
+
+    # Sous-bande 2 : Hautes fréquences en Y, basses en X
+    xlh = (xl[::2,:] - xl[1::2,:])/2
+
+    # Sous-bande 3 : Hautes fréquences en X, basses en Y
+    xhl = (xh[::2,:] + xh[1::2,:])/2
+
+    # Sous-bande 4 : Hautes fréquences en X et Y
+    xhh = (xh[::2,:] - xh[1::2,:])/2
+
+    # Appel récursif
+    xll = DWT(xll, nbRecursion - 1)
+
+    x = np.concatenate(( np.concatenate((xll, xhl)), np.concatenate((xlh, xhh))), axis = 1 )
+
+    return np.array(x)
+
+# Fonction qui applique la transformée inverse en ondelettes discrète de Haar 
+# avec un niveau de récursion défini sur les canaux Y, U, V
+def iDWT(y, u, v, nbRecursion) :
+    
+
+    return np.array(y), np.array(u), np.array(v)
+
 # Ce script effectue la conversion de l'espace de couleur d'une image RGB vers YUV (réversible).
 # Nous utilisons un sous-échantillonnage 4:2:0.
 # Nous utilisons les équations suivantes :
@@ -73,17 +113,26 @@ def subSampling(j, a, b, u, v) :
 # R = V + G, G = Y - (U+V) / 4, B = U + G
 
 # Lecture de l'image originale
-image = (cv2.imread('image4.jpg'))
+image = (cv2.imread('img/image5.jpg')).astype(float)
 b, g, r = cv2.split(image)      # get b, g, r
 #rgb_image = cv2.merge([r,g,b])  # switch to rgb
 #plt.imshow(rgb_image)
 #plt.show()
+
+# mettre toutes les valeurs flottantes entre 0 et 1
+b, g, r = [x/255 for x in [b, g, r]]
 
 # conversion de l'espace des couleurs RGB vers YUV
 y, u, v = rgb2yuv(r, g, b)
 
 # sous-échantillonnage 4:2:0
 u, v = subSampling(4, 2, 0, u, v)
+
+# transformée en ondelettes discrète de Haar (avec trois étages)
+nbRecursion = 3
+y = DWT(y, nbRecursion)
+u = DWT(u, nbRecursion)
+v = DWT(v, nbRecursion)
 
 # conversion de YUV vers RGB
 newR, newG, newB = yuv2rgb(y, u, v)
