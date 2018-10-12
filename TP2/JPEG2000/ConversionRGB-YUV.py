@@ -67,7 +67,7 @@ def subSampling(j, a, b, u, v) :
     return np.array(u), np.array(v)
 
 # Fonction qui applique la transformée en ondelettes discrète de Haar 
-# avec un niveau de récursion défini sur les canaux Y, U, V
+# avec un niveau de récursion défini sur le canal x
 # l : low, h : high
 def DWT(x, nbRecursion) :
     if nbRecursion == 0 :
@@ -79,7 +79,7 @@ def DWT(x, nbRecursion) :
     # En X : filtrage passe-haut. On extrait les hautes fréquences à l'aide des différences.
     xh = (x[:,::2] - x[:,1::2])/2
 
-    # Poursuivre le traitement selon Y des images y1/yh, u1/uh et v1/vh.
+    # Poursuivre le traitement selon Y des images x1 et xh
     # Sous-bande 1 : Basses fréquences en X et Y
     xll = (xl[::2,:] + xl[1::2,:])/2
 
@@ -100,11 +100,44 @@ def DWT(x, nbRecursion) :
     return np.array(x)
 
 # Fonction qui applique la transformée inverse en ondelettes discrète de Haar 
-# avec un niveau de récursion défini sur les canaux Y, U, V
-def iDWT(y, u, v, nbRecursion) :
-    
+# avec un niveau de récursion défini sur le canal x
+def iDWT(x, nbRecursion) :
+    if (nbRecursion == 0) :
+        return x
 
-    return np.array(y), np.array(u), np.array(v)
+    # XL
+    # augmenter la taille de l'image et ajout des hautes fréquences
+    xll = x[:len(x) / (2**nbRecursion), :len(x[0]) / (2**nbRecursion)]
+    xlh = x[:len(x) / (2**nbRecursion), len(x[0]) / (2**nbRecursion):]
+
+    # copie des pixels de xl. Met les mêmes valeurs de xll pour i et i + 1
+    xl = np.zeros((len(xll) * 2, len(xll[0]))
+    for i in range(0, len(xll)) : 
+        for j in range(0, len(xll[0])) :
+            xl[2 * i, j] = xll[i, j] + xlh[i, j]
+            xl[2 * i + 1, j] = xll[i, j] - xlh[i, j]
+
+    # XH
+    # augmenter la taille de l'image et ajout des hautes fréquences
+    xhl = x[len(x)/(2**nbRecursion):, :len(x[0])/(2**nbRecursion)]
+    xhh = x[len(x)/(2**nbRecursion):, len(x[0])/(2**nbRecursion):]
+
+    # copie des pixels de xh. Met les mêmes valeurs de xhl pour i et i + 1
+    xh = np.zeros((len(xhl) * 2, len(xhl[0]))
+    for i in range(0, len(xhl)) :
+        for j in range(0, len(xhl[0])) :
+            xh[2 * i, j] = xhl[i, j] + xhh[i, j]
+            xh[2 * i + 1, j] = xhl[i, j] - xhh[i, j]
+
+    # X
+    # copie des pixels de xl et xh.
+    xRes = np.zeros((len(x), len(x[0]))
+    for i in range(0, len(xl)) :
+        for j in range(0, len(xl[0])) :
+            xRes[i, j * 2] = xl[i, j] + xh[i, j]
+            xRes[i, j * 2 + 1] = xl[i, j] - xh[i, j]
+
+    return np.array(xRes)
 
 # Ce script effectue la conversion de l'espace de couleur d'une image RGB vers YUV (réversible).
 # Nous utilisons un sous-échantillonnage 4:2:0.
@@ -129,10 +162,15 @@ y, u, v = rgb2yuv(r, g, b)
 u, v = subSampling(4, 2, 0, u, v)
 
 # transformée en ondelettes discrète de Haar (avec trois étages)
-nbRecursion = 3
+nbRecursion = 1
 y = DWT(y, nbRecursion)
 u = DWT(u, nbRecursion)
 v = DWT(v, nbRecursion)
+
+# transformée inverse en ondelettes discrète de Haar (avec trois étages)
+y = iDWT(y, nbRecursion)
+u = iDWT(u, nbRecursion)
+v = iDWT(v, nbRecursion)
 
 # conversion de YUV vers RGB
 newR, newG, newB = yuv2rgb(y, u, v)
