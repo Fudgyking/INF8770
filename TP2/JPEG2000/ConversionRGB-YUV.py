@@ -33,6 +33,37 @@ def yuv2rgb(y, u, v) :
 # Fonction qui effectue un sous-échantillonnage de la chrominance 
 # avec un ratio J:a:b de paramètres U (Cb), V (Cr)
 def subSampling(j, a, b, u, v) :
+    for line in range(0, len(u), 2) :
+        onlyLineA = False
+
+        if line + 1 >= len(u) :
+            onlyLineA = True
+
+        cbLineA = u[line]
+        crLineA = v[line]
+
+        if not onlyLineA :
+            crLineB = v[line + 1]
+            cbLineB = u[line + 1]
+
+        for column in range(0, len(u[0])) :
+            # a : nb d'échantillons Cr et Cb dans la première rangée de j pixels (j >= a > 0)
+            sampleALine = int(j / a)
+            index = int(column / sampleALine) * sampleALine
+            cbLineA[column] = cbLineA[index]
+            crLineA[column] = crLineA[index]
+
+            # b : nb d'échantillons Cr et Cb dans la deuxième rangée de j pixels (j >= b >= 0)
+            if not onlyLineA :
+                if (b > 0) :
+                    sampleBLine = int(j / b)
+                    index = int(column / sampleBLine) * sampleBLine
+                    cbLineB[column] = cbLineB[index]
+                    crLineB[column] = crLineB[index]
+                else : # b = 0
+                    cbLineB[column] = cbLineA[column]
+                    crLineB[column] = crLineA[column]
+
     return np.array(u), np.array(v)
 
 # Ce script effectue la conversion de l'espace de couleur d'une image RGB vers YUV (réversible).
@@ -42,7 +73,7 @@ def subSampling(j, a, b, u, v) :
 # R = V + G, G = Y - (U+V) / 4, B = U + G
 
 # Lecture de l'image originale
-image = (cv2.imread('image3.jpg'))
+image = (cv2.imread('image4.jpg'))
 b, g, r = cv2.split(image)      # get b, g, r
 #rgb_image = cv2.merge([r,g,b])  # switch to rgb
 #plt.imshow(rgb_image)
@@ -51,7 +82,8 @@ b, g, r = cv2.split(image)      # get b, g, r
 # conversion de l'espace des couleurs RGB vers YUV
 y, u, v = rgb2yuv(r, g, b)
 
-# sous-échantillonnage
+# sous-échantillonnage 4:2:0
+u, v = subSampling(4, 2, 0, u, v)
 
 # conversion de YUV vers RGB
 newR, newG, newB = yuv2rgb(y, u, v)
