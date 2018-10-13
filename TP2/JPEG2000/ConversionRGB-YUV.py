@@ -4,9 +4,9 @@ import cv2
 
 # Fonction qui convertit l'espace de couleur RGB vers YUV
 def rgb2yuv(r, g, b) :
-    y = [[0 for x in range(len(r[0]))] for y in range(len(r))]
-    u = [[0 for x in range(len(r[0]))] for y in range(len(r))]
-    v = [[0 for x in range(len(r[0]))] for y in range(len(r))]
+    y = np.zeros((100, len(r[0])))
+    u = np.zeros((len(r), len(r[0])))
+    v = np.zeros((len(r), len(r[0])))
 
     for i in range(len(r)) :
         for j in range(len(r[0])) :
@@ -14,13 +14,13 @@ def rgb2yuv(r, g, b) :
             u[i][j] = (b[i][j]) - (g[i][j])
             v[i][j] = (r[i][j]) - (g[i][j])
 
-    return np.array(y), np.array(u), np.array(v)
+    return y, u, v
 
 # Fonction qui convertit l'espace de couleur YUV vers RGB
 def yuv2rgb(y, u, v) :
-    r = [[0 for x in range(len(y[0]))] for z in range(len(y))]
-    g = [[0 for x in range(len(y[0]))] for z in range(len(y))]
-    b = [[0 for x in range(len(y[0]))] for z in range(len(y))]
+    r = np.zeros((len(y), len(y[0])))
+    g = np.zeros((len(y), len(y[0])))
+    b = np.zeros((len(y), len(y[0])))
 
     for i in range(len(y)) :
         for j in range(len(y[0])) :
@@ -28,7 +28,7 @@ def yuv2rgb(y, u, v) :
             r[i][j] = v[i][j] + g[i][j]
             b[i][j] = u[i][j] + g[i][j]
 
-    return np.array(r), np.array(g), np.array(b)
+    return r, g, b
 
 # Fonction qui effectue un sous-échantillonnage de la chrominance 
 # avec un ratio J:a:b de paramètres U (Cb), V (Cr)
