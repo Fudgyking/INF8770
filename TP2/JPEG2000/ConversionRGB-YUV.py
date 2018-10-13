@@ -104,11 +104,13 @@ def DWT(x, nbRecursion) :
 def iDWT(x, nbRecursion) :
     if (nbRecursion == 0) :
         return x
+    
+    topLeft = x[:len(x) >> 1, :len(x[0]) >> 1]
+    xll = iDWT(topLeft, nbRecursion - 1)
 
     # XL
     # augmenter la taille de l'image et ajout des hautes fréquences
-    xll = x[:int(len(x) / (2**nbRecursion)), :int(len(x[0]) / (2**nbRecursion))]
-    xlh = x[:int(len(x) / (2**nbRecursion)), int(len(x[0]) / (2**nbRecursion)):]
+    xlh = x[:len(x) >> 1, len(x[0]) >> 1:]
 
     # copie des pixels de xl. Met les mêmes valeurs de xll pour i et i + 1
     xl = np.zeros((len(xll) * 2, len(xll[0])))
@@ -119,8 +121,8 @@ def iDWT(x, nbRecursion) :
 
     # XH
     # augmenter la taille de l'image et ajout des hautes fréquences
-    xhl = x[int(len(x)/(2**nbRecursion)):, :int(len(x[0])/(2**nbRecursion))]
-    xhh = x[int(len(x)/(2**nbRecursion)):, int(len(x[0])/(2**nbRecursion)):]
+    xhl = x[len(x) >> 1:, :len(x[0]) >> 1]
+    xhh = x[len(x) >> 1:, len(x[0]) >> 1:]
 
     # copie des pixels de xh. Met les mêmes valeurs de xhl pour i et i + 1
     xh = np.zeros((len(xhl) * 2, len(xhl[0])))
@@ -162,7 +164,7 @@ y, u, v = rgb2yuv(r, g, b)
 u, v = subSampling(4, 2, 0, u, v)
 
 # transformée en ondelettes discrète de Haar (avec trois étages)
-nbRecursion = 1
+nbRecursion = 3
 y = DWT(y, nbRecursion)
 u = DWT(u, nbRecursion)
 v = DWT(v, nbRecursion)
