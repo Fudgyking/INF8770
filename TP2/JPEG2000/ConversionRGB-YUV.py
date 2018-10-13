@@ -46,7 +46,7 @@ def subSampling(j, a, b, u, v) :
             crLineB = v[line + 1]
             cbLineB = u[line + 1]
 
-        for column in range(0, len(u[0])) :
+        for column in range(len(u[0])) :
             # a : nb d'échantillons Cr et Cb dans la première rangée de j pixels (j >= a > 0)
             sampleALine = int(j / a)
             index = int(column / sampleALine) * sampleALine
@@ -107,33 +107,33 @@ def iDWT(x, nbRecursion) :
 
     # XL
     # augmenter la taille de l'image et ajout des hautes fréquences
-    xll = x[:len(x) / (2**nbRecursion), :len(x[0]) / (2**nbRecursion)]
-    xlh = x[:len(x) / (2**nbRecursion), len(x[0]) / (2**nbRecursion):]
+    xll = x[:int(len(x) / (2**nbRecursion)), :int(len(x[0]) / (2**nbRecursion))]
+    xlh = x[:int(len(x) / (2**nbRecursion)), int(len(x[0]) / (2**nbRecursion)):]
 
     # copie des pixels de xl. Met les mêmes valeurs de xll pour i et i + 1
-    xl = np.zeros((len(xll) * 2, len(xll[0]))
-    for i in range(0, len(xll)) : 
-        for j in range(0, len(xll[0])) :
+    xl = np.zeros((len(xll) * 2, len(xll[0])))
+    for i in range(len(xll)) :
+        for j in range(len(xll[0])) :
             xl[2 * i, j] = xll[i, j] + xlh[i, j]
             xl[2 * i + 1, j] = xll[i, j] - xlh[i, j]
 
     # XH
     # augmenter la taille de l'image et ajout des hautes fréquences
-    xhl = x[len(x)/(2**nbRecursion):, :len(x[0])/(2**nbRecursion)]
-    xhh = x[len(x)/(2**nbRecursion):, len(x[0])/(2**nbRecursion):]
+    xhl = x[int(len(x)/(2**nbRecursion)):, :int(len(x[0])/(2**nbRecursion))]
+    xhh = x[int(len(x)/(2**nbRecursion)):, int(len(x[0])/(2**nbRecursion)):]
 
     # copie des pixels de xh. Met les mêmes valeurs de xhl pour i et i + 1
-    xh = np.zeros((len(xhl) * 2, len(xhl[0]))
-    for i in range(0, len(xhl)) :
-        for j in range(0, len(xhl[0])) :
+    xh = np.zeros((len(xhl) * 2, len(xhl[0])))
+    for i in range(len(xhl)) :
+        for j in range(len(xhl[0])) :
             xh[2 * i, j] = xhl[i, j] + xhh[i, j]
             xh[2 * i + 1, j] = xhl[i, j] - xhh[i, j]
 
     # X
     # copie des pixels de xl et xh.
-    xRes = np.zeros((len(x), len(x[0]))
-    for i in range(0, len(xl)) :
-        for j in range(0, len(xl[0])) :
+    xRes = np.zeros((len(x), len(x[0])))
+    for i in range(len(xl)) :
+        for j in range(len(xl[0])) :
             xRes[i, j * 2] = xl[i, j] + xh[i, j]
             xRes[i, j * 2 + 1] = xl[i, j] - xh[i, j]
 
