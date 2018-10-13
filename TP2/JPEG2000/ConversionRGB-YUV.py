@@ -4,7 +4,7 @@ import cv2
 
 # Fonction qui convertit l'espace de couleur RGB vers YUV
 def rgb2yuv(r, g, b) :
-    y = np.zeros((100, len(r[0])))
+    y = np.zeros((len(r), len(r[0])))
     u = np.zeros((len(r), len(r[0])))
     v = np.zeros((len(r), len(r[0])))
 
