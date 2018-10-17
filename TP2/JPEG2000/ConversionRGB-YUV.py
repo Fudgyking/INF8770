@@ -105,7 +105,10 @@ def iDWT(x, nbRecursion) :
     if (nbRecursion == 0) :
         return x
     
+    # prend la matrice qui contient le côté en haut à gauche
     topLeft = x[:len(x) >> 1, :len(x[0]) >> 1]
+
+    # appel récursif
     xll = iDWT(topLeft, nbRecursion - 1)
 
     # XL
@@ -139,6 +142,15 @@ def iDWT(x, nbRecursion) :
             xRes[i, j * 2] = xl[i, j] + xh[i, j]
             xRes[i, j * 2 + 1] = xl[i, j] - xh[i, j]
 
+    return xRes
+
+# Effectue la quantification d'un plan de couleur (Y, Cb ou Cr)
+# C'est un quantificateur uniforme à zone morte
+def quantify(x, pas, largeurZoneMorte) :
+    # functeur qui effectue la quantification du nombre
+    # La valeur de y peut être négatif [-255, 255] suite à la convertion de l'espace de couleur RGB vers YUV
+    quantificator = lambda y: 0 if abs(int(y * 255)) < largeurZoneMorte else int(int(y * 255) / pas) * pas
+    xRes = [ [ quantificator(x[i, j]) for j in range(len(x[0])) ] for i in range(len(x)) ]
     return np.array(xRes)
 
 # Ce script effectue la conversion de l'espace de couleur d'une image RGB vers YUV (réversible).
@@ -150,24 +162,77 @@ def iDWT(x, nbRecursion) :
 # Lecture de l'image originale
 image = (cv2.imread('img/image5.jpg')).astype(float)
 b, g, r = cv2.split(image)      # get b, g, r
-#rgb_image = cv2.merge([r,g,b])  # switch to rgb
-#plt.imshow(rgb_image)
-#plt.show()
 
 # mettre toutes les valeurs flottantes entre 0 et 1
 b, g, r = [x/255 for x in [b, g, r]]
 
-# conversion de l'espace des couleurs RGB vers YUV
+rgb_image = cv2.merge([r,g,b])  # switch to rgb
+plt.imshow(rgb_image)
+plt.show()
+
+# conversion de l'espace des couleurs RGB vers YUV, (sans perte, réversible)
 y, u, v = rgb2yuv(r, g, b)
 
-# sous-échantillonnage 4:2:0
+# sous-échantillonnage 4:2:0 (perte d'information, irréversible)
 u, v = subSampling(4, 2, 0, u, v)
 
-# transformée en ondelettes discrète de Haar (avec trois étages)
-nbRecursion = 3
+# transformée en ondelettes discrète de Haar (avec trois étages), sans perte, réversible
+nbRecursion = 1
 y = DWT(y, nbRecursion)
 u = DWT(u, nbRecursion)
 v = DWT(v, nbRecursion)
+
+# quantification (perte d'information, irréversible)
+pas = 4
+largeurZoneMorte = 10
+y = quantify(y, pas, largeurZoneMorte)
+u = quantify(u, pas, largeurZoneMorte)
+v = quantify(v, pas, largeurZoneMorte)
+
+# transformer matrice 2D en vecteur 1D, ligne par ligne
+columnLength = len(y[0])
+y = y.ravel()
+u = u.ravel()
+v = v.ravel()
+
+# preparation du message à encoder (représentation binaire YUV)
+y += 255
+u += 255
+v += 255
+yBinString = ''.join([str(bin(x))[2:].zfill(9) for x in y]) # ZFILL à 9, on rajoute de l'info 8-9 bits
+#yBinString = ''.join([str(x) for x in y])
+uBinString = ''.join([str(bin(x))[2:].zfill(9) for x in u])
+#uBinString = ''.join([str(x) for x in u])
+vBinString = ''.join([str(bin(x))[2:].zfill(9) for x in v])
+#vBinString = ''.join([str(x) for x in v])
+binStringLen = len(yBinString)
+yuvBinString = yBinString + uBinString + vBinString
+
+# compression en LZW
+
+# décompression LZW
+
+# revenir vers le vecteur 1D avec des nombres entiers entre -255 et 255
+yBinString = yuvBinString[0 : binStringLen]
+y = np.array([int(yBinString[i : i + 9], 2) for i in range(0, len(yBinString), 9)])
+
+uBinString = yuvBinString[binStringLen : 2 * binStringLen]
+u = np.array([int(uBinString[i : i + 9], 2) for i in range(0, len(uBinString), 9)])
+
+vBinString = yuvBinString[2 * binStringLen:]
+v = np.array([int(vBinString[i : i + 9], 2) for i in range(0, len(vBinString), 9)])
+
+y -= 255
+u -= 255
+v -= 255
+
+# transformer le vecteur 1D en matrice 2D
+y = np.array([y[i : i + columnLength] for i in range(0, len(y), columnLength)])
+u = np.array([u[i : i + columnLength] for i in range(0, len(u), columnLength)])
+v = np.array([v[i : i + columnLength] for i in range(0, len(v), columnLength)])
+
+# remettre les valeurs en float
+y, u, v = [x/255.0 for x in [y, u, v]]
 
 # transformée inverse en ondelettes discrète de Haar (avec trois étages)
 y = iDWT(y, nbRecursion)
@@ -177,7 +242,7 @@ v = iDWT(v, nbRecursion)
 # conversion de YUV vers RGB
 newR, newG, newB = yuv2rgb(y, u, v)
 
-#print([ [newR[x][y] - r[x][y] for x in range(len(newR[0]))] for y in range(len(newR)) ])
+# affichage de l'image après le pipeline JPEG2000
 rgb_image = cv2.merge([newR,newG,newB])  # switch to rgb
 plt.imshow(rgb_image)
 plt.show()
