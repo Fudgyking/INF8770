@@ -1,6 +1,19 @@
+
+''' 
+***********************************************************************************************************************************************************************
+@File          PipelineJPEG2000.py
+@Title         Implementation de la pipeline de compression JPEG2000 (INF8770 - TP2)
+@Note          L'encodage LZW provient d'une librairie externe (par VIDHUSHINI SRINIVASAN)
+@Author        Vincent Chassé, Pierre To
+@Created       03/10/2018
+***********************************************************************************************************************************************************************
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import EncoderLZW
+import DecoderLZW
 
 # Fonction qui convertit l'espace de couleur RGB vers YUV
 def rgb2yuv(r, g, b) :
@@ -160,59 +173,65 @@ def quantify(x, pas, largeurZoneMorte) :
 # R = V + G, G = Y - (U+V) / 4, B = U + G
 
 # Lecture de l'image originale
-image = (cv2.imread('img/image5.jpg')).astype(float)
+image = (cv2.imread('img/image2.jpg')).astype(float)
 b, g, r = cv2.split(image)      # get b, g, r
 
 # mettre toutes les valeurs flottantes entre 0 et 1
 b, g, r = [x/255 for x in [b, g, r]]
 
 rgb_image = cv2.merge([r,g,b])  # switch to rgb
-plt.imshow(rgb_image)
-plt.show()
+#plt.imshow(rgb_image)
+#plt.show()
 
-# conversion de l'espace des couleurs RGB vers YUV, (sans perte, réversible)
+# ÉTAPE 1 : Conversion de l'espace des couleurs RGB vers YUV, (sans perte, réversible)
 y, u, v = rgb2yuv(r, g, b)
 
-# sous-échantillonnage 4:2:0 (perte d'information, irréversible)
+# ÉTAPE 1 : Sous-échantillonnage 4:2:0 (perte d'information, irréversible)
 u, v = subSampling(4, 2, 0, u, v)
 
-# transformée en ondelettes discrète de Haar (avec trois étages), sans perte, réversible
+# ÉTAPE 2 : Transformée en ondelettes discrète de Haar (avec trois étages), sans perte, réversible
 nbRecursion = 1
 y = DWT(y, nbRecursion)
 u = DWT(u, nbRecursion)
 v = DWT(v, nbRecursion)
 
-# quantification (perte d'information, irréversible)
+# ÉTAPE 3 : Quantification (perte d'information, irréversible)
 pas = 4
 largeurZoneMorte = 10
 y = quantify(y, pas, largeurZoneMorte)
 u = quantify(u, pas, largeurZoneMorte)
 v = quantify(v, pas, largeurZoneMorte)
 
-# transformer matrice 2D en vecteur 1D, ligne par ligne
+# Transformer matrice 2D en vecteur 1D, ligne par ligne
 columnLength = len(y[0])
 y = y.ravel()
 u = u.ravel()
 v = v.ravel()
 
-# preparation du message à encoder (représentation binaire YUV)
+# Préparation du message à encoder (représentation binaire YUV)
 y += 255
 u += 255
 v += 255
 yBinString = ''.join([str(bin(x))[2:].zfill(9) for x in y]) # ZFILL à 9, on rajoute de l'info 8-9 bits
-#yBinString = ''.join([str(x) for x in y])
 uBinString = ''.join([str(bin(x))[2:].zfill(9) for x in u])
-#uBinString = ''.join([str(x) for x in u])
 vBinString = ''.join([str(bin(x))[2:].zfill(9) for x in v])
-#vBinString = ''.join([str(x) for x in v])
 binStringLen = len(yBinString)
 yuvBinString = yBinString + uBinString + vBinString
 
-# compression en LZW
+# ÉTAPE 4 : Compression en LZW
+yuvBinStringEncodingSize = EncoderLZW.compressLZW(yuvBinString, 15)
 
-# décompression LZW
+# ÉTAPE 5 : Calcul du taux de compression
+yuvBinStringSize = len(yuvBinString)
+compressionRate = (1 - (float(yuvBinStringEncodingSize) / yuvBinStringSize)) * 100
+print("Taux de compression : " + str(compressionRate) + "%")
 
-# revenir vers le vecteur 1D avec des nombres entiers entre -255 et 255
+# CHEMIN INVERSE
+
+# ÉTAPE 4 : Décompression LZW
+yuvBinString = DecoderLZW.decompressLZW(15)
+
+# Revenir vers le vecteur 1D avec des nombres entiers entre -255 et 255
 yBinString = yuvBinString[0 : binStringLen]
 y = np.array([int(yBinString[i : i + 9], 2) for i in range(0, len(yBinString), 9)])
 
@@ -226,23 +245,23 @@ y -= 255
 u -= 255
 v -= 255
 
-# transformer le vecteur 1D en matrice 2D
+# Transformer le vecteur 1D en matrice 2D
 y = np.array([y[i : i + columnLength] for i in range(0, len(y), columnLength)])
 u = np.array([u[i : i + columnLength] for i in range(0, len(u), columnLength)])
 v = np.array([v[i : i + columnLength] for i in range(0, len(v), columnLength)])
 
-# remettre les valeurs en float
+# Remettre les valeurs en float
 y, u, v = [x/255.0 for x in [y, u, v]]
 
-# transformée inverse en ondelettes discrète de Haar (avec trois étages)
+# ÉTAPE 2 : Transformée inverse en ondelettes discrète de Haar (avec trois étages)
 y = iDWT(y, nbRecursion)
 u = iDWT(u, nbRecursion)
 v = iDWT(v, nbRecursion)
 
-# conversion de YUV vers RGB
+# ÉTAPE 1 : Conversion de YUV vers RGB
 newR, newG, newB = yuv2rgb(y, u, v)
 
-# affichage de l'image après le pipeline JPEG2000
+# Affichage de l'image après le pipeline JPEG2000
 rgb_image = cv2.merge([newR,newG,newB])  # switch to rgb
 plt.imshow(rgb_image)
 plt.show()
