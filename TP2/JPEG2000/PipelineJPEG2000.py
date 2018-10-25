@@ -173,7 +173,7 @@ def quantify(x, pas, largeurZoneMorte) :
 # R = V + G, G = Y - (U+V) / 4, B = U + G
 
 # Lecture de l'image originale
-image = (cv2.imread('img/image2.jpg')).astype(float)
+image = (cv2.imread('img/image5.jpg')).astype(float)
 b, g, r = cv2.split(image)      # get b, g, r
 
 # mettre toutes les valeurs flottantes entre 0 et 1
@@ -190,7 +190,7 @@ y, u, v = rgb2yuv(r, g, b)
 u, v = subSampling(4, 2, 0, u, v)
 
 # ÉTAPE 2 : Transformée en ondelettes discrète de Haar (avec trois étages), sans perte, réversible
-nbRecursion = 1
+nbRecursion = 3
 y = DWT(y, nbRecursion)
 u = DWT(u, nbRecursion)
 v = DWT(v, nbRecursion)
