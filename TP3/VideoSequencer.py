@@ -19,27 +19,15 @@ import time
 def histogram(image, niveau) :
     b, g, r = cv2.split(image) # get b, g, r
 
-    #histogramR = np.zeros(niveau)
-    #histogramG = np.zeros(niveau)
-    #histogramB = np.zeros(niveau)
-
-    r = r.ravel()
-    g = g.ravel()
-    b = b.ravel()
-    
-    histogramR = [0 for i in range(niveau)] 
-    histogramG = [0 for i in range(niveau)] 
-    histogramB = [0 for i in range(niveau)]
-    
-    pas = int(256 / niveau)
-
-    for i in range(len(r)) :
-        #for j in range(len(r[0])) :
-            histogramR[int(r[i]/pas)] += 1
-            histogramG[int(g[i]/pas)] += 1
-            histogramB[int(b[i]/pas)] += 1
+    histogramR = np.histogram(r, niveau)[0]
+    histogramG = np.histogram(g, niveau)[0]
+    histogramB = np.histogram(b, niveau)[0]
 
     return histogramR, histogramG, histogramB
+
+# Calcule la distance euclidienne entre 2 histogrammes
+def distance(hist1, hist2):
+    return np.sum((hist1 - hist2) ** 2)
 
 # Ouverture du stream de lecture de la séquence vidéo
 videoCapture = cv2.VideoCapture("pole-vaulter.avi")
@@ -53,7 +41,8 @@ if videoCapture.isOpened :
     seuilEffet = 0
 
     compteur = 0
-    
+        
+    totalTime = time.time()
     while (reading) :
         #print(image)
         #b, g, r = cv2.split(image)      # get b, g, r
@@ -61,9 +50,11 @@ if videoCapture.isOpened :
         #plt.imshow(rgb_image)
         #plt.show()
 
-        niveau = 256
+        niveau = 128
         start = time.time()
         histogramR, histogramG, histogramB = histogram(image, niveau)
+        #print(distance(histogramR, histogramB))
+        #print(histogramR)
         end = time.time()
 
         print(compteur, end - start)
@@ -72,5 +63,8 @@ if videoCapture.isOpened :
         # Lecture de la prochaine frame
         reading, image = videoCapture.read()
 
+    endTotal = time.time()
+
+    print(endTotal - totalTime)
     # Fermeture du stream de lecture de la séquence vidéo
     videoCapture.release()
