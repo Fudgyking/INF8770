@@ -39,21 +39,25 @@ if videoCapture.isOpened :
     # Lecture de la premiere frame
     reading, image = videoCapture.read()
 
+    # Variables pour la méthode basée sur les histogrammes
+    niveau = 16
     seuilCoupure = 2500
     seuilEffet = 445
-        
     evaluatingEffect = False
-    isFondu = False
-    frameEffect = 0
     effectStart = 0
-    effectEnd = 0
     effectStartImage = []
 
     totalTime = time.time()
+    
     while (reading) :
-        niveau = 16
-        start = time.time()
+        # Affichage de la vidéo
+        cv2.imshow("Video", image)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        # Méthode basée sur les histogrammes
         histogramR, histogramG, histogramB = histogram(image, niveau)
+
         if not frame:
             prevhistogramR, prevhistogramG, prevhistogramB = list(histogramR), list(histogramG), list(histogramB)
 
@@ -66,17 +70,15 @@ if videoCapture.isOpened :
         if  totalDistance > seuilCoupure:
             evaluatingEffect = False
             print("Coupure à {}, distance de {}".format(frame,totalDistance))
-
             # cv2.imshow("Coupure", image)
             # if cv2.waitKey(1) & 0xFF == ord('q'):
             #    break
         elif totalDistance > seuilEffet:
             if not evaluatingEffect:
                 evaluatingEffect = True
-                frameEffect = 0
                 effectStart = frame
                 effectStartImage = [histogramR,histogramG,histogramB]
-                # cv2.imshow("EffetFin", image)
+                # cv2.imshow("Effet Début", image)
                 # if cv2.waitKey(1) & 0xFF == ord('q'):
                 #     break
         else:
@@ -85,21 +87,14 @@ if videoCapture.isOpened :
                 distanceG = distance(histogramG, effectStartImage[1])
                 distanceB = distance(histogramB, effectStartImage[2])
 
-                totalDistance = 2 * distanceR + distanceG / 2 + distanceB / 2
-                if totalDistance > 2300:
+                totalDistance = 2 * distanceR + distanceG / 2 - 2 * distanceB
+                if totalDistance > 600:
                     print("Début effet à {}, distance de {}".format(effectStart,totalDistance))
                     print("Fin d'effet à {}, distance de {}".format(frame,totalDistance))
-                    # cv2.imshow("EffetFin", image)
+                    # cv2.imshow("Effet Fin", image)
                     # if cv2.waitKey(1) & 0xFF == ord('q'):
                     #     break
                 evaluatingEffect = False
-
-        #grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        #grayImageBlur = cv2.GaussianBlur(grayImage,(5,5),3)
-        #cv2.imshow("Gray", grayImage)
-        #diffGauss = np.absolute(grayImage - grayImageBlur)
-        #diffGauss = diffGauss * 255/np.max(diffGauss)
-        #cv2.imshow("GrayBlur", diffGauss)
         
         # Décomposition par comparaison des arêtes
 
@@ -118,7 +113,7 @@ if videoCapture.isOpened :
         row = grayImage[len(grayImage)-1, :]
         grayImage = np.row_stack((grayImage, row))
 
-        # calcul de la convolution avec les filtres de Sobel selon l'axe X et l'axe Y
+        # Calcul de la convolution avec les filtres de Sobel selon l'axe X et l'axe Y
         sobelx = cv2.Sobel(grayImage, cv2.CV_64F, 1, 0, ksize=3)
         sobely = cv2.Sobel(grayImage, cv2.CV_64F, 0, 1, ksize=3)
 
@@ -131,8 +126,10 @@ if videoCapture.isOpened :
         # Dilatation des arêtes
         kernel = np.ones((3, 3), np.uint8)
         dilatedEdges = cv2.dilate(edges, kernel, iterations = 1)
-        cv2.imshow("Dilated Edges", dilatedEdges)
-
+        # cv2.imshow("Dilated Edges", dilatedEdges)
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
+        
         if not frame:
             prevEdges, prevDilatedEdges = list(edges), list(dilatedEdges)
         
@@ -142,68 +139,19 @@ if videoCapture.isOpened :
         # Aretes sortants
         edgesOut = 1 - (np.sum(prevEdges * dilatedEdges) / np.sum(prevEdges))
 
-        #print("EdgesIn:", edgesIn)
-        #print("EdgesOut:", edgesOut)
-
         # Détection d'une coupure
         if max(edgesIn, edgesOut) > -50:
-            print("Coupure EDGES à {}, distance de {}".format(frame, max(edgesIn, edgesOut)))
-
-        # Détection d'un fondu
-        if max(edgesIn, edgesOut) > -100:
-            frameEffect = frameEffect + 1
-        else:
-            if frameEffect > 3:
-                print("Fin d'effet à {}, frameEffect de {}".format(frame, frameEffect))
-            frameEffect = 0
-
-        # if not isFondu:
-        #     fondu = edgesIn > edgesOut
-        # else:
-        #     fondu = edgesIn < edgesOut
-
-        # if frameEffect == 0:
-        #     prevFondu = fondu
-
-        # if fondu == prevFondu:
-        #     frameEffect = frameEffect + 1
-        # else:
-        #     if frameEffect > 4:
-        #         if not isFondu:
-        #             print("Début effet à {}, frameEffect de {}".format(frame - frameEffect, frameEffect))
-        #             isFondu = True
-        #         else:
-        #             print("Fin d'effet à {}, frameEffect de {}".format(frame, frameEffect))
-        #             isFondu = False
-        #     else:
-        #         isFondu = False
-            
-        #     frameEffect = 0
-        
-        # prevFondu = fondu
-        
-        #if frame == 589:
-        #    cv2.imshow("589", dilatedEdges)
-
-        #if frame == 590:
-        #    print(max(edgesIn, edgesOut))
-        #    cv2.imshow("590", dilatedEdges)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        end = time.time()
-
-        #print(frame, " : ", totalDistance)
-        #print(frame, end - start)
-        frame += 1
+            print("Coupure à {}, distance de {} (comparaison des aretes)".format(frame, max(edgesIn, edgesOut)))
 
         # Lecture de la prochaine frame
+        frame += 1
         reading, image = videoCapture.read()
         prevhistogramR, prevhistogramG, prevhistogramB = list(histogramR), list(histogramG), list(histogramB)
         prevEdges, prevDilatedEdges = list(edges), list(dilatedEdges)
 
+    # Temps d'exécution
     endTotal = time.time()
+    print("Temps d'exécution : {}".format(endTotal - totalTime))
 
-    print(endTotal - totalTime)
     # Fermeture du stream de lecture de la séquence vidéo
     videoCapture.release()
